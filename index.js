@@ -64,6 +64,16 @@ async function run() {
             }
             next()
         }
+        // verify instructor
+        const verifyInstructor = async (req, res, next) => {
+            const email = req.decoded.email;
+            const query = { email: email };
+            const user = await userCollection.findOne(query);
+            if (user?.role !== 'instructor') {
+                return res.status(403).send({ error: true, message: 'forbidden access' })
+            }
+            next()
+        }
 
         // user related apis
         app.get('/users', verifyJWT, verifyAdmin, async (req, res) => {
@@ -84,7 +94,6 @@ async function run() {
             res.send(result)
         })
 
-        // TODO: admin check and jwt check
         app.patch('/users/:role', verifyJWT, verifyAdmin, async (req, res) => {
             const userEmail = req.body.email;
             const query = { email: userEmail }

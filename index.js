@@ -11,6 +11,22 @@ const port = process.env.PORT || 4000;
 app.use(cors())
 app.use(express.json())
 
+const verifyJWT = (req, res, next) => {
+    const authorization = req.headers.authorization;
+    if (!authorization) {
+        return res.status(401).send({ error: true, message: 'unauthorized access' })
+    }
+    // bearer token
+    const token = authorization.split(' ')[1];
+    jwt.verify(token, process.env.ACCESS_KEY_TOKEN, (err, decoded) => {
+        if (err) {
+            return res.status(401).send({ error: true, message: 'unauthorized access' })
+        }
+        req.decoded = decoded;
+        next()
+    })
+}
+
 
 const { MongoClient, ServerApiVersion } = require('mongodb');
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.wy9csda.mongodb.net/?retryWrites=true&w=majority`;
@@ -31,8 +47,26 @@ async function run() {
 
         const userCollection = client.db('tastePot').collection('users')
 
+        // JWT
+        app.post('/jwt', async (req, res) => {
+            const userEmail = req.body;
+            const token = jwt.sign(userEmail, process.env.ACCESS_KEY_TOKEN, { expiresIn: '1d' })
+            res.send({ token })
+        })
+
+        // verify admin
+        const verifyAdmin = async (req, res, next) => {
+            const email = req.decoded.email;
+            const query = { email: email };
+            const user = await userCollection.findOne(query);
+            if (user?.role !== 'admin') {
+                return res.status(403).send({ error: true, message: 'forbidden access' })
+            }
+            next()
+        }
+
         // user related apis
-        app.get('/users', async (req, res) => {
+        app.get('/users', verifyJWT, verifyAdmin, async (req, res) => {
 
             const result = await userCollection.find().toArray()
             res.send(result)
@@ -50,11 +84,13 @@ async function run() {
             res.send(result)
         })
 
-        app.patch('/users/:role', async (req, res) => {
+        // TODO: admin check and jwt check
+        app.patch('/users/:role', verifyJWT, verifyAdmin, async (req, res) => {
             const userEmail = req.body.email;
             const query = { email: userEmail }
             const roleUpdate = req.params.role
-            if(roleUpdate === 'instructor'){
+
+            if (roleUpdate === 'instructor') {
                 const update = {
                     $set: {
                         role: roleUpdate
@@ -63,7 +99,7 @@ async function run() {
                 const result = await userCollection.updateOne(query, update)
                 res.send(result)
             }
-            else{
+            else {
                 const update = {
                     $set: {
                         role: roleUpdate

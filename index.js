@@ -50,6 +50,30 @@ async function run() {
             res.send(result)
         })
 
+        app.patch('/users/:role', async (req, res) => {
+            const userEmail = req.body.email;
+            const query = { email: userEmail }
+            const roleUpdate = req.params.role
+            if(roleUpdate === 'instructor'){
+                const update = {
+                    $set: {
+                        role: roleUpdate
+                    }
+                }
+                const result = await userCollection.updateOne(query, update)
+                res.send(result)
+            }
+            else{
+                const update = {
+                    $set: {
+                        role: roleUpdate
+                    }
+                }
+                const result = await userCollection.updateOne(query, update)
+                res.send(result)
+            }
+        })
+
 
 
         // Send a ping to confirm a successful connection

@@ -45,6 +45,7 @@ async function run() {
         await client.connect();
 
         const userCollection = client.db('tastePot').collection('users')
+        const classCollection = client.db('tastePot').collection('classes')
 
         // JWT
         app.post('/jwt', async (req, res) => {
@@ -79,6 +80,23 @@ async function run() {
         app.get('/users', verifyJWT, verifyAdmin, async (req, res) => {
 
             const result = await userCollection.find().toArray()
+            res.send(result)
+        })
+
+        app.get('/users/role/:email', verifyJWT, async (req, res) => {
+            const email = req.params.email;
+            if (req.decoded.email !== email) {
+                return res.send({ admin: false })
+            }
+            const query = { email: email };
+            const user = await userCollection.findOne(query);
+            const result = { admin: user?.role }
+            return res.send(result)
+        })
+
+        app.get('/users/instructors', async (req, res) => {
+            const query = { role: 'instructor' }
+            const result = await userCollection.find(query).toArray()
             res.send(result)
         })
 
@@ -119,17 +137,16 @@ async function run() {
             }
         })
 
-        app.get('/users/role/:email', verifyJWT, async (req, res) => {
-            const email = req.params.email;
-            if (req.decoded.email !== email) {
-                return res.send({ admin: false })
-            }
-            const query = { email: email };
-            const user = await userCollection.findOne(query);
-            const result = { admin: user?.role }
-            return res.send(result)
-        })
 
+
+
+        // Class related apis
+
+        app.post('/classes', verifyJWT, verifyInstructor, async (req, res) => {
+            const newClass = req.body
+            const result = await classCollection.insertOne(newClass)
+            res.send(result)
+        })
 
         // Send a ping to confirm a successful connection
         await client.db("admin").command({ ping: 1 });

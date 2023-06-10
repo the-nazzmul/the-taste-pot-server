@@ -16,7 +16,6 @@ const verifyJWT = (req, res, next) => {
     if (!authorization) {
         return res.status(401).send({ error: true, message: 'unauthorized access' })
     }
-    // bearer token
     const token = authorization.split(' ')[1];
     jwt.verify(token, process.env.ACCESS_KEY_TOKEN, (err, decoded) => {
         if (err) {
@@ -76,6 +75,7 @@ async function run() {
         }
 
         // user related apis
+
         app.get('/users', verifyJWT, verifyAdmin, async (req, res) => {
 
             const result = await userCollection.find().toArray()
@@ -119,6 +119,16 @@ async function run() {
             }
         })
 
+        app.get('/users/role/:email', verifyJWT, async (req, res) => {
+            const email = req.params.email;
+            if (req.decoded.email !== email) {
+                return res.send({ admin: false })
+            }
+            const query = { email: email };
+            const user = await userCollection.findOne(query);
+            const result = { admin: user?.role }
+            return res.send(result)
+        })
 
 
         // Send a ping to confirm a successful connection

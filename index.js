@@ -27,7 +27,7 @@ const verifyJWT = (req, res, next) => {
 }
 
 
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.wy9csda.mongodb.net/?retryWrites=true&w=majority`;
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
@@ -142,10 +142,35 @@ async function run() {
 
         // Class related apis
 
+        app.get('/classes', async(req,res)=> {
+            const query = {status: 'approved'}
+            const result = await classCollection.find(query).toArray()
+            res.send(result)
+        })
+
+        app.get('/allClasses',verifyJWT,verifyAdmin, async(req, res)=> {
+            const result = await classCollection.find().toArray()
+            res.send(result)
+        })
+
         app.post('/classes', verifyJWT, verifyInstructor, async (req, res) => {
             const newClass = req.body
             const result = await classCollection.insertOne(newClass)
             res.send(result)
+        })
+
+        app.patch('/allClasses', verifyJWT, verifyAdmin, async(req, res) =>{
+            const classId = req.body.id;
+            const approval = req.body.approval;
+            const query = {_id: new ObjectId(classId)}
+            const update = {
+                $set: {
+                    status: approval
+                }
+            }
+            const result = classCollection.updateOne(query, update)
+            res.send(result)
+
         })
 
         // Send a ping to confirm a successful connection

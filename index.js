@@ -7,7 +7,6 @@ const app = express();
 const port = process.env.PORT || 4000;
 
 // middlewarwe
-
 app.use(cors())
 app.use(express.json())
 
@@ -86,12 +85,13 @@ async function run() {
 
         app.get('/users/role/:email', verifyJWT, async (req, res) => {
             const email = req.params.email;
+
             if (req.decoded.email !== email) {
                 return res.send({ admin: false })
             }
             const query = { email: email };
             const user = await userCollection.findOne(query);
-            const result = { admin: user?.role }
+            const result = { role: user?.role }
             return res.send(result)
         })
 

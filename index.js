@@ -46,6 +46,7 @@ async function run() {
 
         const userCollection = client.db('tastePot').collection('users')
         const classCollection = client.db('tastePot').collection('classes')
+        const selectedClassCollection = client.db('tastePot').collection('selectedClass')
 
         // JWT
         app.post('/jwt', async (req, res) => {
@@ -142,14 +143,31 @@ async function run() {
 
         // Class related apis
 
-        app.get('/classes', async(req,res)=> {
-            const query = {status: 'approved'}
+        app.get('/classes', async (req, res) => {
+            const query = { status: 'approved' }
             const result = await classCollection.find(query).toArray()
             res.send(result)
         })
 
-        app.get('/allClasses',verifyJWT,verifyAdmin, async(req, res)=> {
+        app.get('/classes/:id', async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: new ObjectId(id) }
+            const result = await classCollection.findOne(query)
+            res.send(result)
+        })
+
+        app.get('/allClasses', verifyJWT, verifyAdmin, async (req, res) => {
             const result = await classCollection.find().toArray()
+            res.send(result)
+        })
+
+        app.get('/myClasses/:email', verifyJWT, verifyInstructor, async (req, res) => {
+            const email = req.params.email;
+            const query = { instructorEmail: email }
+            if (req.decoded.email !== email) {
+                return res.status(403).send({ message: 'forbidden access' })
+            }
+            const result = await classCollection.find(query).toArray()
             res.send(result)
         })
 
@@ -158,11 +176,11 @@ async function run() {
             const result = await classCollection.insertOne(newClass)
             res.send(result)
         })
-
-        app.patch('/allClasses', verifyJWT, verifyAdmin, async(req, res) =>{
+        // handle approve class
+        app.patch('/allClasses/approved', verifyJWT, verifyAdmin, async (req, res) => {
             const classId = req.body.id;
-            const approval = req.body.approval;
-            const query = {_id: new ObjectId(classId)}
+            const approval = 'approved';
+            const query = { _id: new ObjectId(classId) }
             const update = {
                 $set: {
                     status: approval
@@ -171,6 +189,72 @@ async function run() {
             const result = classCollection.updateOne(query, update)
             res.send(result)
 
+        })
+        // handle deny class
+        app.patch('/allClasses/deny', verifyJWT, verifyAdmin, async (req, res) => {
+            const classId = req.body.id;
+            const feedback = req.body.feedback;
+            console.log(classId, feedback);
+            const approval = 'denied';
+            const query = { _id: new ObjectId(classId) }
+            const update = {
+                $set: {
+                    status: approval,
+                    feedback: feedback
+                }
+            }
+            const result = classCollection.updateOne(query, update)
+            res.send(result)
+        })
+        // handle update class
+        app.patch('/myClasses', verifyJWT, verifyInstructor, async (req, res) => {
+            const id = req.body.id
+            const price = req.body.price;
+            const description = req.body.description
+            const query = { _id: new ObjectId(id) }
+            const update = {
+                $set: {
+                    price: price,
+                    description: description
+                }
+            }
+            const result = await classCollection.updateOne(query, update)
+            res.send(result)
+        })
+
+        // admin delete class
+        app.delete('/classes/:id', verifyJWT, verifyAdmin, async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: new ObjectId(id) }
+            const result = await classCollection.deleteOne(query)
+            res.send(result)
+        })
+        // instructor delete class
+        app.delete('/myClasses/:id', verifyJWT, verifyInstructor, async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: new ObjectId(id) }
+            const result = await classCollection.deleteOne(query)
+            res.send(result)
+        })
+
+        // user selected class api
+        app.post('/selectedClasses', verifyJWT, async(req, res) => {
+            const email = req.body
+            if(!email){
+               return res.send([])
+            }
+            if(req.decoded.email === email){
+                return res.status(403).send({message: 'forbidden access'})
+            }
+            const query = {email: email}
+            const result = await selectedClassCollection.find(query).toArray()
+            res.send(result)
+        })
+
+        app.post('/selectedClasses', verifyJWT, async (req, res) => {
+            const selectedItem = req.body
+            const result = await selectedClassCollection.insertOne(selectedItem)
+            res.send(result)
         })
 
         // Send a ping to confirm a successful connection

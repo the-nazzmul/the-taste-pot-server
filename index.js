@@ -237,16 +237,16 @@ async function run() {
             res.send(result)
         })
 
-        // user selected class api
-        app.post('/selectedClasses', verifyJWT, async(req, res) => {
-            const email = req.body
-            if(!email){
-               return res.send([])
+        // selected class api
+        app.get('/selectedClasses/:email', verifyJWT, async (req, res) => {
+            const email = req.params.email
+            if (!email) {
+                return res.send([])
             }
-            if(req.decoded.email === email){
-                return res.status(403).send({message: 'forbidden access'})
+            if (req.decoded.email !== email) {
+                return res.status(403).send({ message: 'forbidden access' })
             }
-            const query = {email: email}
+            const query = { email: email }
             const result = await selectedClassCollection.find(query).toArray()
             res.send(result)
         })
@@ -254,6 +254,13 @@ async function run() {
         app.post('/selectedClasses', verifyJWT, async (req, res) => {
             const selectedItem = req.body
             const result = await selectedClassCollection.insertOne(selectedItem)
+            res.send(result)
+        })
+
+        app.delete('/selectedClasses/:id', verifyJWT, async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: new ObjectId(id) }
+            const result = selectedClassCollection.deleteOne(query)
             res.send(result)
         })
 

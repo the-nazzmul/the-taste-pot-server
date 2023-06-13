@@ -275,6 +275,19 @@ app.delete('/selectedClasses/:id', verifyJWT, async (req, res) => {
     res.send(result)
 })
 
+// payment system
+app.post('create-payment-intent', async(req, res)=>{
+    const {price} = req.body
+    const amount = parseFloat(price*100)
+    const paymentIntent = await stripe.paymentIntents.create({
+        amount: amount,
+        currency: "usd",
+        payment_method_types: ['card']
+    });
+    res.send({
+        clientSecret: paymentIntent.client_secret
+    })
+})
 
 
 app.listen(port, () => {

@@ -53,6 +53,7 @@ dbConnect()
 const userCollection = client.db('tastePot').collection('users')
 const classCollection = client.db('tastePot').collection('classes')
 const selectedClassCollection = client.db('tastePot').collection('selectedClass')
+const paymentCollection = client.db('tastePot').collection('payment')
 
 app.get('/', (req, res) => {
     res.send('Pot is boiling')
@@ -261,6 +262,12 @@ app.get('/selectedClasses/:email', verifyJWT, async (req, res) => {
     const result = await selectedClassCollection.find(query).toArray()
     res.send(result)
 })
+app.get('/selectedCourse/:id', verifyJWT, async (req, res) => {
+    const id = req.params.id
+    const query = { _id: new ObjectId(id) }
+    const result = await selectedClassCollection.findOne(query)
+    res.send(result)
+})
 
 app.post('/selectedClasses', verifyJWT, async (req, res) => {
     const selectedItem = req.body
@@ -276,9 +283,10 @@ app.delete('/selectedClasses/:id', verifyJWT, async (req, res) => {
 })
 
 // payment system
-app.post('create-payment-intent', async(req, res)=>{
-    const {price} = req.body
-    const amount = parseFloat(price*100)
+app.post('/create-payment-intent', verifyJWT, async (req, res) => {
+    const { price } = req.body
+    const amount = parseFloat(price * 100)
+    console.log(price);
     const paymentIntent = await stripe.paymentIntents.create({
         amount: amount,
         currency: "usd",
@@ -287,6 +295,21 @@ app.post('create-payment-intent', async(req, res)=>{
     res.send({
         clientSecret: paymentIntent.client_secret
     })
+})
+
+// save payment
+app.post('/payments', verifyJWT, async (req, res) => {
+    const payment = req.body;
+    const result = await paymentCollection.insertOne(payment)
+    const deleteQuery = { _id: new ObjectId(payment.selectedCourseId) }
+    const deleteResult = await selectedClassCollection.deleteOne(deleteQuery)
+    const classQuery = { _id: new ObjectId(payment.courseId) }
+    const courseUpdateResult = await classCollection.findOneAndUpdate(classQuery, {
+        $inc: {
+            availableSeats: -1, enrolled: 1
+        }
+    })
+    res.send({ result, deleteResult, courseUpdateResult })
 })
 
 

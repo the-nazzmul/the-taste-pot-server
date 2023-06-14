@@ -90,8 +90,13 @@ const verifyInstructor = async (req, res, next) => {
 // user related apis
 
 app.get('/users', verifyJWT, verifyAdmin, async (req, res) => {
-
     const result = await userCollection.find().toArray()
+    res.send(result)
+})
+app.get('/singleUser/:id', async (req, res) => {
+    const id = req.params.id
+    const query = { _id: new ObjectId(id) }
+    const result = await userCollection.findOne()
     res.send(result)
 })
 
@@ -167,6 +172,12 @@ app.get('/classes/:id', async (req, res) => {
     const result = await classCollection.findOne(query)
     res.send(result)
 })
+app.get('/instructor/:email', async (req, res) => {
+    const email = req.params.email;
+    const query = { instructorEmail: email }
+    const result = await classCollection.find(query).toArray()
+    res.send(result)
+})
 
 app.get('/allClasses', verifyJWT, verifyAdmin, async (req, res) => {
     const result = await classCollection.find().toArray()
@@ -206,7 +217,6 @@ app.patch('/allClasses/approved', verifyJWT, verifyAdmin, async (req, res) => {
 app.patch('/allClasses/deny', verifyJWT, verifyAdmin, async (req, res) => {
     const classId = req.body.id;
     const feedback = req.body.feedback;
-    console.log(classId, feedback);
     const approval = 'denied';
     const query = { _id: new ObjectId(classId) }
     const update = {

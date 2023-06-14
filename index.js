@@ -271,6 +271,11 @@ app.get('/selectedCourse/:id', verifyJWT, async (req, res) => {
 
 app.post('/selectedClasses', verifyJWT, async (req, res) => {
     const selectedItem = req.body
+    const query = { email: selectedItem.email, courseId: selectedItem.courseId }
+    const foundCourse = await selectedClassCollection.findOne(query)
+    if (foundCourse) {
+        return res.send({ message: "You have already selected this course" })
+    }
     const result = await selectedClassCollection.insertOne(selectedItem)
     res.send(result)
 })
@@ -286,7 +291,6 @@ app.delete('/selectedClasses/:id', verifyJWT, async (req, res) => {
 app.post('/create-payment-intent', verifyJWT, async (req, res) => {
     const { price } = req.body
     const amount = parseFloat(price * 100)
-    console.log(price);
     const paymentIntent = await stripe.paymentIntents.create({
         amount: amount,
         currency: "usd",
@@ -297,7 +301,12 @@ app.post('/create-payment-intent', verifyJWT, async (req, res) => {
     })
 })
 
-// save payment
+app.get('/paymentHistory/:email', verifyJWT, async (req, res) => {
+    const email = req.params.email;
+    const query = { email: email }
+    const result = await paymentCollection.find(query).sort({ date: -1 }).toArray()
+    res.send(result)
+})
 app.post('/payments', verifyJWT, async (req, res) => {
     const payment = req.body;
     const result = await paymentCollection.insertOne(payment)

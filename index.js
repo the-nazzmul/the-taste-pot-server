@@ -1,5 +1,5 @@
-require('dotenv').config()
 const express = require('express');
+require('dotenv').config()
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
 const stripe = require('stripe')(process.env.PAYMENT_SECRET_KEY)
@@ -10,6 +10,7 @@ const port = process.env.PORT || 4000;
 // middlewarwe
 app.use(cors())
 app.use(express.json())
+
 
 const verifyJWT = (req, res, next) => {
     const authorization = req.headers.authorization;
